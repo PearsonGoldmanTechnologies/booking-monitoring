@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {months,verdict,transition,httpChecks} from './monitor.mjs';
+test('month rollover is dynamic',()=>assert.deepEqual(months(new Date('2026-12-31T23:59:00Z')),['2026-12','2027-01']));
+test('HTTP 200 alone cannot pass broken page',()=>{assert.equal(verdict(200,'Something went wrong','custom').state,'failure');assert.equal(verdict(503,{},'availability').state,'failure');});
+test('no slots and access restrictions distinguished',()=>{assert.equal(verdict(200,{month:'2026-11',days:[]},'availability').state,'healthy');for(const s of [401,403,429])assert.equal(verdict(s,'','native').state,'monitor-access');});
+test('two consecutive failures alert once, recovery alerts once',()=>{let s=transition(undefined,{state:'failure'});assert.equal(s.event,null);s=transition(s,{state:'failure'});assert.equal(s.event,'outage');s=transition(s,{state:'failure'});assert.equal(s.event,null);s=transition(s,{state:'healthy'});assert.equal(s.event,'recovery');assert.equal(transition(s,{state:'healthy'}).event,null);});
+test('unexpected redirect fails and all requests are read-only',async()=>{const calls=[];const out=await httpChecks(async(url,opts)=>{calls.push(opts);return {status:302};},new Date('2026-11-03T12:00:00Z'));assert.equal(out.length,5);assert.ok(out.every(x=>x.state==='failure'));assert.ok(calls.every(x=>!x.method));});
+test('controlled failure and recovery needs no production mutations',()=>{let s;for(const status of [503,503,200])s=transition(s,verdict(status,{month:'2026-11',days:[]},'availability'));assert.equal(s.event,'recovery');});
+test('monitor restrictions alert separately after confirmation',()=>{let s=transition(undefined,{state:'monitor-access'});assert.equal(s.event,null);s=transition(s,{state:'monitor-access'});assert.equal(s.event,'monitor-incident');assert.equal(transition(s,{state:'healthy'}).event,'recovery');});

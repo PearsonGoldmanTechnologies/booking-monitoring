@@ -1,0 +1,1 @@
+{"name":"pearsongoldman-booking-monitor","private":true,"type":"module","scripts":{"test":"node --test monitor.test.mjs","check":"node run.mjs"},"dependencies":{"playwright":"1.62.1"}}
