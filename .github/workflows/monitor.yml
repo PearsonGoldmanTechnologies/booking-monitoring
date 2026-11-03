@@ -27,6 +27,13 @@ jobs:
           node-version: '22'
       - run: node --test monitor.test.mjs
       - run: node hosted.mjs
+        id: checks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEST_NOTIFICATIONS: ${{ inputs.test_notifications }}
+      - run: node heartbeat.mjs
+        if: always()
+        env:
+          HEALTHCHECKS_PING_URL: ${{ secrets.HEALTHCHECKS_PING_URL }}
+          WORKER_RESULT: ${{ job.status }}
           TEST_NOTIFICATIONS: ${{ inputs.test_notifications }}

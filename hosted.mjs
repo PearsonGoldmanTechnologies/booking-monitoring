@@ -28,6 +28,7 @@ if(!prior.browserAt||Date.now()-Date.parse(prior.browserAt)>=25*60000){
   if(run.error)failure=true;
  }
  if(failure){state.workerHealthy=false;observed.push({id:'browser-worker',state:'monitor-access',reason:'Browser runner failed; customer state not established',url:runUrl});}
+ else observed.push({id:'browser-worker',state:'healthy',reason:'Browser runner completed',url:runUrl});
 }
 async function notify(id,observation){
  const old=state.checks[id];const next=transition(old,observation);
@@ -36,7 +37,7 @@ async function notify(id,observation){
   const issue=await api('/issues','POST',{title:`[Monitor] ${id}: ${next.event==='monitor-incident'?'monitor access restriction':'confirmed failure'}`,body:`@PearsonGoldmanTechnologies\n\nTwo consecutive failed observations. Classification: ${next.event}.\n\nURL: ${observation.url}\nUK time: ${ukTime(at)}\nUTC: ${at.toISOString()}\nReason: ${row.reason}\nEvidence: ${runUrl}\n\nRead-only monitoring. No appointment submitted.`});row.issue=issue.number;
   state.history.push({event:'outage',id,at:at.toISOString(),issue:issue.number});
  }
- if(next.event==='recovery'&&row.issue){
+ if(observation.state==='healthy'&&row.issue){
   await api(`/issues/${row.issue}/comments`,'POST',{body:`@PearsonGoldmanTechnologies Recovery observed at ${ukTime(at)}. ${observation.url}\nEvidence: ${runUrl}`});
   await api(`/issues/${row.issue}`,'PATCH',{state:'closed'});state.history.push({event:'recovery',id,at:at.toISOString(),issue:row.issue});row.issue=null;
  }
@@ -56,6 +57,8 @@ if(hour>=9&&state.summaryDate!==date){
 state.history=state.history.slice(-200);
 const activeIds=new Set([...observed.map(x=>x.id),'browser-custom','browser-native']);
 state.customerHealthy=Object.entries(state.checks).filter(([id])=>activeIds.has(id)&&!['notification-test','browser-worker'].includes(id)).every(([,x])=>x.state==='healthy');
+state.confirmedOutage=Object.entries(state.checks).some(([id,x])=>activeIds.has(id)&&id!=='browser-worker'&&x.state==='down');
+state.workerHealthy=state.workerHealthy&&Boolean(state.browserAt)&&Date.now()-Date.parse(state.browserAt)<45*60000;
 await api('/contents/status.json','PUT',{message:'chore: record monitoring observation [skip ci]',content:Buffer.from(JSON.stringify(state)).toString('base64'),...(priorFile?{sha:priorFile.sha}:{})});
 if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,`${ukTime(at)}\n\n${summary}\n`);
 console.log('Monitoring observations persisted; workerHealthy='+state.workerHealthy+'; customerHealthy='+state.customerHealthy);

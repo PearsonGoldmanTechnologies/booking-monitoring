@@ -15,7 +15,7 @@ export function verdict(status,body,kind){
 export function transition(previous={state:'unknown',failures:0},observation){
  if(['monitor-access','monitor-policy-block'].includes(observation.state)){const failures=previous.state==='monitor-access'?(previous.failures||0)+1:1;return {state:'monitor-access',failures,event:failures===2?'monitor-incident':null};}
  if(observation.state==='healthy')return {state:'healthy',failures:0,event:previous.state==='down'||(previous.state==='monitor-access'&&previous.failures>=2)?'recovery':null};
- const failures=(previous.failures||0)+1;
+ const failures=['suspect','down'].includes(previous.state)?(previous.failures||0)+1:1;
  return {state:failures>=2?'down':'suspect',failures,event:failures===2?'outage':null};
 }
 export async function httpChecks(fetcher=fetch,now=new Date()){
