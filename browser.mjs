@@ -39,11 +39,15 @@ for(const [engine,browserType] of Object.entries(process.env.MONITOR_ALL_BROWSER
     await page.locator('#booking-calendar').waitFor();result.availableDays=json.days.length;
     if(await page.getByText('Scheduling is temporarily unavailable.',{exact:false}).isVisible())throw new Error('VISIBLE_SCHEDULING_ERROR');
    }else{
-    await page.getByRole('radio',{name:'30-minute meeting',exact:true}).waitFor({timeout:30000});
+    const service=page.getByRole('radio',{name:'30-minute meeting',exact:true});
+    await service.waitFor({timeout:30000});
+    // Selecting the service only loads its availability; all appointment writes remain blocked.
+    await service.check({timeout:30000});
+    await page.getByRole('button',{name:'Next month',exact:true}).waitFor({timeout:30000});
     await page.getByRole('heading',{name:/add your details/i}).waitFor({timeout:30000});
     const body=await page.locator('body').innerText();
     if(/something went wrong|booking page is not available|service unavailable/i.test(body))throw new Error('VISIBLE_MICROSOFT_ERROR');
-    result.interface='30-minute service and customer-details section rendered; no booking submitted';
+    result.interface='Enabled selected 30-minute service, date navigation and customer-details section rendered; no booking submitted';
    }
    result.state='healthy';
   }catch(e){result.state=e.message==='MONITOR_ACCESS'?'monitor-access':surface==='native'&&blocked.some(x=>x.host==='bookings.cloud.microsoft')?'monitor-policy-block':'failure';result.reason=e.message.slice(0,220);}
