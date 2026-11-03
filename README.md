@@ -19,6 +19,8 @@ The workflow is schedule/workflow_dispatch only, never pull_request. `test_notif
 
 ## Limits and maintenance
 
+Activation verification, 3 November 2026 at 15:42 GMT: manual cloud runs and alert/recovery delivery passed, but no automatic scheduled event had appeared after more than 30 minutes. The independent heartbeat correctly detected the missed worker. Scheduled functional monitoring is not yet accepted as operational. Verify a genuine schedule event and fresh browser result before closing this acceptance gap; do not mask it with manual pings.
+
 GitHub schedules may be delayed or dropped; they are not a timing SLA. Check last-observation timestamps and investigate missing daily reports. The workflow writes a small status commit each successful run, preventing the 60-day inactivity condition while it operates; persistent failures still need owner attention. Independently hosted UptimeRobot checks continue if GitHub stops, but cannot prove that the functional worker remains fresh solely from a previously green document.
 
 On a worker alert, inspect Actions runs and Healthchecks last-ping time. Restore only the monitoring workflow or its encrypted secret, then dispatch a read-only run and verify recovery. Never redeploy the website or alter Bookings settings as an automatic monitoring response. The free heartbeat integration closes the stale-worker gap; maintain its account/email and keep the secret private.
